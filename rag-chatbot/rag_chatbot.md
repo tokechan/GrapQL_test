@@ -164,11 +164,85 @@ TypeScriptを実行できるようになりました。
 
 
 3. Wikipediaページを集める
+<<<<<<< HEAD
+
+情報を集めてくるコードを書いていく。
+スクレイピングにはLangChainとその裏で使用されエチルPuppeteerというライブラリが必要なので最初にインストールをする。
+少し時間がかかるので、Xでも見ながら待つと良い。もしくは記事を読む。
+```
+$ npm i langchain @langchain/community puppeteer 
+```
+Wikipediaのページ情報を集めてくるスクリプトはこちらになります。
+```
+import {
+  Browser,
+  Page,
+  PuppeteerWebBaseLoader,
+} from "@langchain/community/document_loaders/web/puppeteer";
+const animeData = [
+  "https://ja.wikipedia.org/wiki/Category:2024%E5%B9%B4%E3%81%AE%E3%83%86%E3%83%AC%E3%83%93%E3%82%A2%E3%83%8B%E3%83%A1",
+  // "https://ja.wikipedia.org/wiki/%E3%80%90%E6%8E%A8%E3%81%97%E3%81%AE%E5%AD%90%E3%80%91_(%E3%82%A2%E3%83%8B%E3%83%A1)",
+];
+
+const scrapePage = async () => {
+  const pageData = [];
+  for await (const url of animeData) {
+    const loader = new PuppeteerWebBaseLoader(url, {
+      launchOptions: {
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      },
+      gotoOptions: {
+        waitUntil: "domcontentloaded",
+      },
+      evaluate: async (page: Page, browser: Browser) => {
+        const result = await page.evaluate(() => document.body.innerHTML);
+        await browser.close();
+        return result;
+      },
+    });
+
+    const data = await loader.scrape();
+    pageData.push(data);
+  }
+
+  return pageData;
+};
+
+(async () => {
+  const data = await scrapePage();
+  console.log(data);
+})();
+
+
+```
+スクレイピングに関しては、animeDataをforで回してlangchainに用意されている機能を利用して行います。
+
+設定は公式ドキュメント通りではありますが、evaluateに実際に取得したページに対して行うことを書いていきます。
+
+ここではページに対してevaluateをすることで取得したページに対してJavaScriptの処理を実行することができます。中ではWebページの document.body.innerHTML（つまり、タグの中身すべて）を取得しています。
+```npm run seed```を実行するとページを取得してくる
+それらの文章をベクトルにしてをDBに保存する。
+
+Astra DBとChatGPT APIを使用するので、それぞれアカウントを作成する。ChatGPTだけ課金が必要になる。
+
+AstraDBはアカウント作成をしてから以下の手順でDB作成とキーの取得をします。
+左メニューから「Database」を選択→「Create Database」をクリック
+- Database name : anime_db
+- Region : us-east2
+に設定して「Creatte Database」をクリック
+初期化が始まるのでこちらもしばしばお待ちいただく。
+
+初期化後は「Generate Token」をクリックしてApplication Tokenをコピーして.envにペーストするんだが.envがないので作成する
+```touch .env```で作成できるのでルートディレクトリで作成する（今回はscriptがルート）
+合わせて今回必要な環境変数も追加する
+```
+ASTRA_DB_NAMESPACE="default_keyspace"
+ASTRA_DB_COLLECTION="anime"
+ASTRA_DB_API_ENDPOINT="あなたのエンドポイント"
+ASTRA_DB_APPLICATION_TOKEN="あなたのトークン"
+```
+>>>>>>> 4d0950f6 (Langchain&setting)
 
 
 
-
-4.  文章をベクトル化する
-
-
-5. ベクトルをDBに保存する
