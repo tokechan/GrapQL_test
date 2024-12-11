@@ -1,1 +1,0 @@
-# GrapQL_test
