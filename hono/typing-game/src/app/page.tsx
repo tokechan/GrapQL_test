@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 
+// 追加
+type Score = {
+  userName: string;
+  score: number;
+};
+
 export default function Home() {
   const questions = [
     { question: "React", image: "/monster1.jpg" },
@@ -15,13 +21,13 @@ export default function Home() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [userName, setUserName] = useState("");
-  // 追加
   const [startTime, setStartTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [score, setScore] = useState(0);
-
   // 追加
-  const addResult = (userName: string, startTime: number) => {
+  const [scores, setScores] = useState<Score[]>([]);
+
+  const addResult = async (userName: string, startTime: number) => {
     const endTime = Date.now();
     const totalTime = endTime - startTime;
     const timeInSeconds = totalTime / 1000;
@@ -29,7 +35,25 @@ export default function Home() {
     const timeDeduction = Math.floor(timeInSeconds * 100);
     const score = Math.max(1000, baseScore - timeDeduction);
 
+    await fetch("/api/result", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        score: score,
+        userName: userName,
+      }),
+    });
+
     return { totalTime, score };
+  };
+
+  // 追加
+  const fetchScores = async () => {
+    const res = await fetch("/api/result");
+    const data = await res.json();
+    return data.results;
   };
 
   useEffect(() => {
@@ -44,12 +68,15 @@ export default function Home() {
 
       if (currentPosition === currentQuestion.question.length - 1) {
         if (currentQuestionIndex === questions.length - 1) {
-          // 追加
-          const { totalTime, score } = addResult(userName, startTime);
+          const { totalTime, score } = await addResult(userName, startTime);
+
           setTotalTime(totalTime);
           setScore(score);
-          
           setIsCompleted(true);
+
+          // 追加
+          const scores = await fetchScores();
+          setScores(scores);
         } else {
           setCurrentQuestionIndex((prev) => prev + 1);
           setCurrentPosition(0);
@@ -68,8 +95,6 @@ export default function Home() {
     }
 
     setIsStarted(true);
-
-    // 追加
     setStartTime(Date.now());
   };
 
@@ -97,8 +122,6 @@ export default function Home() {
     );
   }
 
-
-  // 修正
   if (isCompleted) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
@@ -112,6 +135,29 @@ export default function Home() {
               seconds
             </p>
             <p>Score: {score}</p>
+          </div>
+          {/* 追加 */}
+          <div className="mt-8">
+            <h3>Ranking</h3>
+            {scores.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <p>Loading scores...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {scores.map((score, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-3"
+                  >
+                    <span>
+                      {index + 1}.{score.userName}
+                    </span>
+                    <span className="text-red-500">{score.score}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
